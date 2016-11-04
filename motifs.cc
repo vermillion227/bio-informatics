@@ -1,8 +1,8 @@
-#include <iostream>
-#include <iostream>
-#include <string>
-#include <map>
 #include <algorithm>
+#include <climits>
+#include <iostream>
+#include <map>
+#include <string>
 #include <vector>
 
 #include "utils.h"
@@ -76,9 +76,9 @@ bool CommonPattern(const vector<string> &dna,
   return true;
 }
 
-vector<string> GreedyMotifSearch(const vector<string> &dna,
-                                 const int k,
-                                 const int d) {
+vector<string> MotifEnumeration(const vector<string> &dna,
+                                const int k,
+                                const int d) {
   vector<string> patterns;
 
   for (const string& current : dna) {
@@ -100,20 +100,92 @@ vector<string> GreedyMotifSearch(const vector<string> &dna,
   return patterns;
 }
 
+int Distance(const vector<string> &dna, const string &ptn) {
+  int d = 0;
+  for (const string &seq : dna) {
+    int min = INT_MAX;
+    for (int i = 0; i < seq.length() - ptn.length() + 1; i++) {
+      string current = seq.substr(i, ptn.length());
+      int hamming = utils::HammingDistance(ptn, current);
+      if (hamming < min) {
+        min = hamming;
+      }
+    }
+    d += min;
+  }
+
+  return d;
+}
+
+string MedianString(const vector<string> &dna, const int k) {
+  int distance = INT_MAX;
+  string median;
+  for (int i = 0; i < (1 << (2 * k)); i++) {
+    string aux;
+    utils::NumberToPattern(i, k, &aux);
+    int d = Distance(dna, aux);
+    if (d < distance) {
+      distance = d;
+      median = aux;
+    }
+  }
+
+  return median;
+}
+
+string GetConsensus(const vector<string> motifs) {
+  vector<vector<double> > profile = CreateProfile(motifs);
+  return ProfileMostProbable(motifs[0], motifs[0].size(), profile);
+}
+
+int Score(const vector<string> motifs) {
+  string consensus = GetConsensus(motifs);
+  return Distance(motifs, consensus);
+}
+
+vector<string> GreedyMotifSearch(const vector<string> dna,
+                                 const int k,
+                                 const int t) {
+  vector<string> best_motifs;
+  for (const string &seq : dna) {
+    best_motifs.push_back(seq.substr(0, k));
+  }
+
+  string dna_0 = dna[0];
+  for (int i = 0; i < dna_0.length() - k + 1; i++) {
+    string motif_0 = dna_0.substr(i, k);
+    vector<string> new_motifs;
+
+    new_motifs.push_back(motif_0);
+    for (int j = 1; j < t; j++) {
+      vector<vector<double> > profile = CreateProfile(new_motifs);
+      string new_motif = ProfileMostProbable(dna[j], k, profile);
+      new_motifs.push_back(new_motif);
+    }
+
+    if (Score(new_motifs) < Score(best_motifs)) {
+      best_motifs = new_motifs;
+    }
+  }
+
+  return best_motifs;
+}
+
 int main() {
-  string t;
+  int t;
   int k, d;
   vector<string> dnas;
 
-  cin  >> k >> d;
+  cin >> k >> t;
 
-  while (cin >> t) {
-    dnas.push_back(t);
+  for (int i = 0; i < t; i++) {
+    string aux;
+    cin >> aux;
+    dnas.push_back(aux);
   }
 
-  vector<string> pp = GreedyMotifSearch(dnas, k, d);
-  for (const string& p : pp) {
-    cout << p << " ";
+  vector<string> motifs = GreedyMotifSearch(dnas, k, t);
+  for (const string& m : motifs) {
+    cout << m << endl;
   }
-  cout << endl;
 }
