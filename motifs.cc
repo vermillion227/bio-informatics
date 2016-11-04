@@ -188,4 +188,6 @@ int main() {
   for (const string& m : motifs) {
     cout << m << endl;
   }
+
+  return 0;
 }
