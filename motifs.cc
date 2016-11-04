@@ -5,37 +5,9 @@
 #include <algorithm>
 #include <vector>
 
+#include "utils.h"
+
 using namespace std;
-
-int SymbolToNumber(char c) {
-  switch(c) {
-    case 'A':
-      return 0;
-    case 'C':
-      return 1;
-    case 'G':
-      return 2;
-    case 'T':
-      return 3;
-    default:
-      return -1;
-  }
-}
-
-char NumberToSymbol(int n) {
-  switch(n) {
-    case 0:
-      return 'A';
-    case 1:
-      return 'C';
-    case 2:
-      return 'G';
-    case 3:
-      return 'T';
-    default:
-      return '-';
-  }
-}
 
 string ProfileMostProbable(const string &text,
                            const int k,
@@ -47,7 +19,7 @@ string ProfileMostProbable(const string &text,
     string aux = text.substr(i, k);
     double probability = 1;
     for (int j = 0; j < k; j++) {
-      int index = SymbolToNumber(aux[j]);
+      int index = utils::SymbolToNumber(aux[j]);
       probability *= profile[index][j];
     }
 
@@ -69,43 +41,79 @@ vector<vector<double> > CreateProfile(const vector<string> &motifs) {
     profile.push_back(line);
   }
 
-  for (string &motif : motifs) {
+  for (const string &motif : motifs) {
     for (int i = 0; i < k; i++) {
-      profile[SymbolToNumber(motif[i])][i]++;
+      profile[utils::SymbolToNumber(motif[i])][i]++;
     }
   }
 
   for (int i = 0; i < 4; i++) {
     for (int j = 0; j < k; j++) {
-      profile /= (2 * motifs.length());
+      profile[i][j] /= (2 * motifs.size());
     }
   }
 
   return profile;
 }
 
+bool CommonPattern(const vector<string> &dna,
+                   const string &pattern,
+                   const int d) {
+  vector<string> neighs = utils::Neighbors(pattern, d);
+  for (const string &d : dna) {
+    bool found = false;
+    for (const string &p : neighs) {
+      if (d.find(p) != string::npos) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 vector<string> GreedyMotifSearch(const vector<string> &dna,
                                  const int k,
-                                 const int t) {
-  // TODO:
+                                 const int d) {
+  vector<string> patterns;
+
+  for (const string& current : dna) {
+    for (int j = 0; j < current.length() - k + 1; j++) {
+      string pattern = current.substr(j, k);
+      vector<string> neighbors = utils::Neighbors(pattern, d);
+      for (const string &pattern_ : neighbors) {
+        if (CommonPattern(dna, pattern_, d)) {
+          patterns.push_back(pattern_);
+        }
+      }
+    }
+  }
+
+  sort(patterns.begin(), patterns.end());
+  auto last = unique(patterns.begin(), patterns.end());
+  patterns.erase(last, patterns.end());
+
+  return patterns;
 }
 
 int main() {
   string t;
-  int k;
-  vector<vector<double> > prof;
+  int k, d;
+  vector<string> dnas;
 
-  cin >> t >> k;
-  for (int i = 0; i < 4; i++) {
-    vector <double> aux;
-    for (int j = 0; j < k; j++) {
-      double p;
-      cin >> p;
-      aux.push_back(p);
-    }
-    prof.push_back(aux);
-    aux.clear();
+  cin  >> k >> d;
+
+  while (cin >> t) {
+    dnas.push_back(t);
   }
 
-  cout << ProfileMostProbable(t, k, prof);
+  vector<string> pp = GreedyMotifSearch(dnas, k, d);
+  for (const string& p : pp) {
+    cout << p << " ";
+  }
+  cout << endl;
 }
